@@ -1,0 +1,75 @@
+---
+##################################
+# ServiceAccount for application #
+##################################
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: go-k8s-example
+  namespace: {{ .NAMESPACE }}
+---
+##########################################################################
+# Defines delete permissions for deployments, services and patch ingress #
+##########################################################################
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: go-k8s-example-role
+  namespace: {{ .NAMESPACE }}
+rules:
+- apiGroups: ["extensions"]
+  resources: ["deployments"]
+  verbs: ["delete"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["delete"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["patch"]
+---
+###########################################################################
+# Allows service account "go-k8s-example" to delete deployments, services #
+# and patch ingress in {{ .NAMESPACE }} namespace.                        #
+###########################################################################
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: go-k8s-example-binding
+  namespace: {{ .NAMESPACE }}
+subjects:
+- kind: ServiceAccount
+  name: go-k8s-example
+  namespace: {{ .NAMESPACE }}
+roleRef:
+  kind: Role
+  name: go-k8s-example-role
+  apiGroup: rbac.authorization.k8s.io
+---
+#######
+# App #
+#######
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: go-k8s-example
+  namespace: {{ .NAMESPACE }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: go-k8s-example
+    spec:
+      containers:
+      - name: app
+        image: paweloczadly/go-k8s-example
+        env:
+        - name: DEPLOYMENT_NAME
+          value: {{ .DEPLOYMENT_NAME }}
+        - name: NAMESPACE
+          value: {{ .NAMESPACE }}
+        - name: INGRESS_NAME
+          value: {{ .INGRESS_NAME }}
+        - name: DNS_DOMAIN
+          value: {{ .DNS_DOMAIN }}
+      serviceAccountName: go-k8s-example
